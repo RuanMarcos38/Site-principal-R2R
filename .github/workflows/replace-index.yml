@@ -1,0 +1,38 @@
+name: Replace index from uploaded design
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/replace-index.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild index.html
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .r2r-index-parts/part-*.b64 | base64 --decode | gzip --decompress > index.html
+          echo "b7ca10e0e8a8c1bf5e68b6267ad8e6536fa8c20f7b64b90d8b3819a6c10d8d39  index.html" | sha256sum --check
+          rm -rf .r2r-index-parts
+          rm -f .github/workflows/replace-index.yml
+
+      - name: Commit replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A index.html .r2r-index-parts .github/workflows/replace-index.yml
+          git commit -m "Atualiza index.html conforme layout anexado"
+          git push
