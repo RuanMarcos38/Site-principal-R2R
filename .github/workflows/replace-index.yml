@@ -1,4 +1,4 @@
-name: Diagnose index package final
+name: Export index diagnostics
 
 on:
   pull_request:
@@ -9,10 +9,9 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  diagnose:
+  export:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,33 +20,20 @@ jobs:
           show-progress: false
           ref: ${{ github.head_ref }}
 
-      - name: Validate package parts
+      - name: Prepare diagnostic files
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          set +e
-          {
-            echo "PARTES:"
-            for file in .r2r-index-parts/part-*.b64; do
-              printf '%s ' "$(basename "$file")"
-              wc -c < "$file" | tr -d '\n'
-              printf ' '
-              sha256sum "$file" | cut -d' ' -f1
-            done
-            cat .r2r-index-parts/part-*.b64 > /tmp/r2r-index.b64
-            echo "BASE64_TOTAL $(wc -c < /tmp/r2r-index.b64) $(sha256sum /tmp/r2r-index.b64 | cut -d' ' -f1)"
-            base64 --decode /tmp/r2r-index.b64 > /tmp/r2r-index.html.gz 2>/tmp/base64-error.txt
-            echo "BASE64_STATUS $?"
-            cat /tmp/base64-error.txt
-            gzip --test /tmp/r2r-index.html.gz 2>/tmp/gzip-test-error.txt
-            echo "GZIP_TEST_STATUS $?"
-            cat /tmp/gzip-test-error.txt
-            gzip --decompress --stdout /tmp/r2r-index.html.gz > /tmp/index.html 2>/tmp/gzip-error.txt
-            echo "GZIP_STATUS $?"
-            cat /tmp/gzip-error.txt
-            echo "INDEX $(wc -c < /tmp/index.html) $(sha256sum /tmp/index.html | cut -d' ' -f1)"
-          } > /tmp/report.txt 2>&1
-          REPORT=$(cat /tmp/report.txt)
-          gh pr comment "${{ github.event.pull_request.number }}" --body "### Validação final das partes do index\n\n\`\`\`text\n${REPORT}\n\`\`\`"
-          cat /tmp/report.txt
+          set -euo pipefail
+          mkdir -p /tmp/r2r-diagnostic
+          cp .r2r-index-parts/part-011a.b64 /tmp/r2r-diagnostic/
+          cp .r2r-index-parts/part-011b.b64 /tmp/r2r-diagnostic/
+          cat .r2r-index-parts/part-*.b64 > /tmp/r2r-diagnostic/combined.b64
+          base64 --decode /tmp/r2r-diagnostic/combined.b64 > /tmp/r2r-diagnostic/index.html.gz
+          gzip --decompress --stdout /tmp/r2r-diagnostic/index.html.gz > /tmp/r2r-diagnostic/generated-index.html || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r2r-index-diagnostic
+          path: /tmp/r2r-diagnostic
+          if-no-files-found: error
+          retention-days: 1
