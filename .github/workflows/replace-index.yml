@@ -1,4 +1,4 @@
-name: Diagnose index package
+name: Diagnose index package final
 
 on:
   pull_request:
@@ -49,5 +49,5 @@ jobs:
             echo "INDEX $(wc -c < /tmp/index.html) $(sha256sum /tmp/index.html | cut -d' ' -f1)"
           } > /tmp/report.txt 2>&1
           REPORT=$(cat /tmp/report.txt)
-          gh pr comment "${{ github.event.pull_request.number }}" --body "### Diagnóstico das partes do index\n\n\`\`\`text\n${REPORT}\n\`\`\`"
+          gh pr comment "${{ github.event.pull_request.number }}" --body "### Validação final das partes do index\n\n\`\`\`text\n${REPORT}\n\`\`\`"
           cat /tmp/report.txt
