@@ -1,0 +1,135 @@
+    /* Ajustes responsivos: preservam o layout, conteúdo e identidade visual */
+    img, svg, video { max-width: 100%; height: auto; }
+    .nav, .menu, .card, .panel, .final, .footer-grid > * { min-width: 0; }
+    .foot-links a { overflow-wrap: anywhere; }
+
+    .hero-print {
+      min-height: 0;
+      height: auto;
+      max-height: none;
+      aspect-ratio: 1352 / 565;
+      background-size: cover;
+      background-position: center top;
+    }
+
+    @media (max-width: 1100px) {
+      .nav { gap: 16px; }
+      .logo { min-width: 160px; }
+      .logo strong { font-size: 34px; }
+      .menu { gap: 12px; }
+      .menu a { font-size: 14px; }
+      .whats {
+        min-width: 145px;
+        min-height: 52px;
+        padding-inline: 18px;
+        font-size: 16px;
+      }
+      .hero-print {
+        min-height: 0;
+        height: auto;
+        max-height: none;
+        aspect-ratio: 1352 / 565;
+        background-size: cover;
+        background-position: center top;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .topbar {
+        height: 116px;
+        min-height: 116px;
+      }
+      .nav {
+        height: 116px;
+        min-height: 116px;
+        padding: 8px 0 6px;
+        flex-wrap: wrap;
+        align-content: center;
+        justify-content: space-between;
+        gap: 6px 12px;
+      }
+      .logo {
+        min-width: 0;
+        flex: 0 1 auto;
+      }
+      .logo strong { font-size: 30px; }
+      .whats {
+        display: inline-flex;
+        margin-left: auto;
+        min-width: auto;
+        min-height: 42px;
+        padding: 0 14px;
+        font-size: 14px;
+      }
+      .menu {
+        display: flex;
+        order: 3;
+        flex: 0 0 100%;
+        justify-content: flex-start;
+        gap: 20px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 2px 0 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .menu::-webkit-scrollbar { display: none; }
+      .menu a {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        font-size: 13px;
+        line-height: 1.2;
+      }
+      .menu a.active::after { bottom: -7px; }
+      .hero-print { margin-top: 116px; }
+      .final { grid-template-columns: 1fr; }
+      .final .btn { justify-self: start; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        height: 110px;
+        min-height: 110px;
+      }
+      .nav {
+        height: 110px;
+        min-height: 110px;
+        padding: 7px 0 5px;
+      }
+      .logo strong { font-size: 28px; }
+      .logo span { font-size: 10px; }
+      .whats {
+        min-height: 40px;
+        padding-inline: 12px;
+        font-size: 13px;
+      }
+      .menu { gap: 18px; padding-bottom: 7px; }
+      .menu a { font-size: 12px; }
+      .hero-print { margin-top: 110px; }
+      .cards { grid-template-columns: 1fr; }
+      .btn {
+        width: 100%;
+        max-width: 100%;
+        min-height: 48px;
+        padding-inline: 14px;
+        white-space: normal;
+        text-align: center;
+      }
+      .final .btn { justify-self: stretch; }
+      .footer-grid { gap: 28px; }
+    }
+
+    @media (max-width: 360px) {
+      .container { width: min(100% - 20px, 1180px); }
+      .logo strong { font-size: 26px; }
+      .logo span { font-size: 9px; }
+      .whats {
+        min-height: 38px;
+        padding-inline: 10px;
+        font-size: 12px;
+      }
+      .menu { gap: 16px; }
+      .menu a { font-size: 11px; }
+      .card, .panel, .final { padding: 20px; }
+      .section-title h2, .panel h2, .final h2 { font-size: 30px; }
+    }
