@@ -1,4 +1,4 @@
-name: Replace index from uploaded design
+name: Diagnose index package
 
 on:
   pull_request:
@@ -8,10 +8,11 @@ on:
       - '.github/workflows/replace-index.yml'
 
 permissions:
-  contents: write
+  contents: read
+  pull-requests: write
 
 jobs:
-  replace:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,24 +21,33 @@ jobs:
           show-progress: false
           ref: ${{ github.head_ref }}
 
-      - name: Rebuild and validate index.html
+      - name: Validate package parts
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          cat .r2r-index-parts/part-*.b64 > /tmp/r2r-index.b64
-          base64 --decode /tmp/r2r-index.b64 > /tmp/r2r-index.html.gz
-          gzip --test /tmp/r2r-index.html.gz
-          gzip --decompress --stdout /tmp/r2r-index.html.gz > index.html
-          echo "b7ca10e0e8a8c1bf5e68b6267ad8e6536fa8c20f7b64b90d8b3819a6c10d8d39  index.html" | sha256sum --check
-          rm -rf .r2r-index-parts
-          rm -f .github/workflows/replace-index.yml
-
-      - name: Commit replacement
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A index.html .r2r-index-parts .github/workflows/replace-index.yml
-          git commit -m "Atualiza somente o index.html conforme layout anexado"
-          git push origin HEAD:${{ github.head_ref }}
+          set +e
+          {
+            echo "PARTES:"
+            for file in .r2r-index-parts/part-*.b64; do
+              printf '%s ' "$(basename "$file")"
+              wc -c < "$file" | tr -d '\n'
+              printf ' '
+              sha256sum "$file" | cut -d' ' -f1
+            done
+            cat .r2r-index-parts/part-*.b64 > /tmp/r2r-index.b64
+            echo "BASE64_TOTAL $(wc -c < /tmp/r2r-index.b64) $(sha256sum /tmp/r2r-index.b64 | cut -d' ' -f1)"
+            base64 --decode /tmp/r2r-index.b64 > /tmp/r2r-index.html.gz 2>/tmp/base64-error.txt
+            echo "BASE64_STATUS $?"
+            cat /tmp/base64-error.txt
+            gzip --test /tmp/r2r-index.html.gz 2>/tmp/gzip-test-error.txt
+            echo "GZIP_TEST_STATUS $?"
+            cat /tmp/gzip-test-error.txt
+            gzip --decompress --stdout /tmp/r2r-index.html.gz > /tmp/index.html 2>/tmp/gzip-error.txt
+            echo "GZIP_STATUS $?"
+            cat /tmp/gzip-error.txt
+            echo "INDEX $(wc -c < /tmp/index.html) $(sha256sum /tmp/index.html | cut -d' ' -f1)"
+          } > /tmp/report.txt 2>&1
+          REPORT=$(cat /tmp/report.txt)
+          gh pr comment "${{ github.event.pull_request.number }}" --body "### Diagnóstico das partes do index\n\n\`\`\`text\n${REPORT}\n\`\`\`"
+          cat /tmp/report.txt
