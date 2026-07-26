@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   replace:
@@ -22,18 +23,48 @@ jobs:
 
       - name: Rebuild and validate index.html
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set +e
           cat .r2r-index-parts/part-*.b64 > /tmp/r2r-index.b64
-          BASE64_SIZE=$(wc -c < /tmp/r2r-index.b64)
-          PADDING=$(( (4 - (BASE64_SIZE % 4)) % 4 ))
+          ORIGINAL_SIZE=$(wc -c < /tmp/r2r-index.b64)
+          PADDING=$(( (4 - (ORIGINAL_SIZE % 4)) % 4 ))
           if [ "$PADDING" -gt 0 ]; then
             printf '%*s' "$PADDING" '' | tr ' ' '=' >> /tmp/r2r-index.b64
           fi
-          base64 --decode /tmp/r2r-index.b64 > /tmp/r2r-index.html.gz
-          gzip --test /tmp/r2r-index.html.gz
-          gzip --decompress --stdout /tmp/r2r-index.html.gz > index.html
-          echo "b7ca10e0e8a8c1bf5e68b6267ad8e6536fa8c20f7b64b90d8b3819a6c10d8d39  index.html" | sha256sum --check
+          PADDED_SIZE=$(wc -c < /tmp/r2r-index.b64)
+          base64 --decode /tmp/r2r-index.b64 > /tmp/r2r-index.html.gz 2>/tmp/base64-error.txt
+          BASE64_STATUS=$?
+          gzip --test /tmp/r2r-index.html.gz 2>/tmp/gzip-test-error.txt
+          GZIP_TEST_STATUS=$?
+          gzip --decompress --stdout /tmp/r2r-index.html.gz > index.html 2>/tmp/gzip-error.txt
+          GZIP_STATUS=$?
+          GENERATED_SHA=$(sha256sum index.html | cut -d' ' -f1)
+          if [ "$GENERATED_SHA" = "b7ca10e0e8a8c1bf5e68b6267ad8e6536fa8c20f7b64b90d8b3819a6c10d8d39" ]; then
+            HASH_STATUS=0
+          else
+            HASH_STATUS=1
+          fi
+          {
+            echo "Tamanho original: ${ORIGINAL_SIZE}"
+            echo "Padding adicionado: ${PADDING}"
+            echo "Tamanho após padding: ${PADDED_SIZE}"
+            echo "Status base64: ${BASE64_STATUS}"
+            cat /tmp/base64-error.txt
+            echo "Status teste gzip: ${GZIP_TEST_STATUS}"
+            cat /tmp/gzip-test-error.txt
+            echo "Status descompressão: ${GZIP_STATUS}"
+            cat /tmp/gzip-error.txt
+            echo "SHA gerado: ${GENERATED_SHA}"
+            echo "Status hash: ${HASH_STATUS}"
+          } > /tmp/r2r-report.txt
+          REPORT=$(cat /tmp/r2r-report.txt)
+          gh pr comment "${{ github.event.pull_request.number }}" --body "### Validação da reconstrução\n\n\`\`\`text\n${REPORT}\n\`\`\`"
+          cat /tmp/r2r-report.txt
+          if [ "$BASE64_STATUS" -ne 0 ] || [ "$GZIP_TEST_STATUS" -ne 0 ] || [ "$GZIP_STATUS" -ne 0 ] || [ "$HASH_STATUS" -ne 0 ]; then
+            exit 1
+          fi
           rm -rf .r2r-index-parts
           rm -f .github/workflows/replace-index.yml
 
