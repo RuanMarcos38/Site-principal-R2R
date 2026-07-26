@@ -1,4 +1,4 @@
-# Execução segura: substitui somente o index.html deste repositório
+# Execução final validada: substitui somente o index.html deste repositório
 name: Replace index from uploaded design
 
 on:
@@ -19,11 +19,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Rebuild index.html
+      - name: Rebuild and validate index.html
         shell: bash
         run: |
           set -euo pipefail
-          cat .r2r-index-parts/part-*.b64 | base64 --decode | gzip --decompress > index.html
+          cat .r2r-index-parts/part-*.b64 > /tmp/r2r-index.b64
+          base64 --decode /tmp/r2r-index.b64 > /tmp/r2r-index.html.gz
+          gzip --test /tmp/r2r-index.html.gz
+          gzip --decompress --stdout /tmp/r2r-index.html.gz > index.html
           echo "b7ca10e0e8a8c1bf5e68b6267ad8e6536fa8c20f7b64b90d8b3819a6c10d8d39  index.html" | sha256sum --check
           rm -rf .r2r-index-parts
           rm -f .github/workflows/replace-index.yml
