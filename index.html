@@ -173,16 +173,19 @@
     }
 
     main {
-      padding: 68px 0 0;
+      padding: 44px 0 0;
       background:
         radial-gradient(circle at 15% 0%, rgba(0,229,255,.10), transparent 28%),
         linear-gradient(180deg, #020511, #050716);
     }
 
-    section { padding: 34px 0; }
+    main > section {
+      padding: 28px 0;
+      scroll-margin-top: 96px;
+    }
     .section-title {
       max-width: 780px;
-      margin: 0 0 32px;
+      margin: 0 0 28px;
     }
 
     .section-title h2,
@@ -295,7 +298,7 @@
     }
 
     .final {
-      margin-top: 18px;
+      margin-top: 0;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 28px;
@@ -304,8 +307,8 @@
     }
 
     footer {
-      margin-top: 54px;
-      padding: 48px 0 30px;
+      margin-top: 32px;
+      padding: 44px 0 30px;
       border-top: 1px solid rgba(255,255,255,.10);
       background: #020511;
       color: var(--muted);
@@ -358,7 +361,10 @@
         background-size: auto 100%;
         background-position: center top;
       }
-      main { padding-top: 42px; }
+      main { padding-top: 28px; }
+      main > section { padding: 24px 0; }
+      .section-title { margin-bottom: 24px; }
+      footer { margin-top: 28px; padding: 40px 0 28px; }
       .cards, .split, .final, .footer-grid {
         grid-template-columns: 1fr;
       }
@@ -368,6 +374,10 @@
 
     @media(max-width: 480px) {
       .container { width: min(100% - 24px, 1180px); }
+      main { padding-top: 24px; }
+      main > section { padding: 20px 0; }
+      .section-title { margin-bottom: 22px; }
+      footer { margin-top: 24px; }
       .hero-print {
         min-height: 460px;
         height: 62svh;
