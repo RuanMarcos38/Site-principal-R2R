@@ -1,3 +1,4 @@
+# Execução segura: substitui somente o index.html deste repositório
 name: Replace index from uploaded design
 
 on:
