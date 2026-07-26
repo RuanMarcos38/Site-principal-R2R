@@ -1,4 +1,4 @@
-name: Export current R2R index
+name: Apply R2R section spacing review
 
 on:
   pull_request:
@@ -8,10 +8,10 @@ on:
       - '.github/workflows/export-current-index.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export:
+  apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,9 +20,62 @@ jobs:
           show-progress: false
           ref: ${{ github.head_ref }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: r2r-current-index
-          path: index.html
-          if-no-files-found: error
-          retention-days: 1
+      - name: Adjust only section spacing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import re
+
+          path = Path('index.html')
+          original = path.read_text(encoding='utf-8')
+          original_hash = hashlib.sha256(original.encode('utf-8')).hexdigest()
+          expected_original = 'b7ca10e0e8a8c1bf5e68b6267ad8e6536fa8c20f7b64b90d8b3819a6c10d8d39'
+          if original_hash != expected_original:
+              raise SystemExit(f'Index de origem inesperado: {original_hash}')
+
+          replacements = [
+              ('    main {\n      padding: 68px 0 0;', '    main {\n      padding: 44px 0 0;'),
+              ('    section { padding: 34px 0; }', '    main > section {\n      padding: 28px 0;\n      scroll-margin-top: 96px;\n    }'),
+              ('      margin: 0 0 32px;', '      margin: 0 0 28px;'),
+              ('      margin-top: 18px;', '      margin-top: 0;'),
+              ('      margin-top: 54px;\n      padding: 48px 0 30px;', '      margin-top: 32px;\n      padding: 44px 0 30px;'),
+              ('      main { padding-top: 42px; }', '      main { padding-top: 28px; }\n      main > section { padding: 24px 0; }\n      .section-title { margin-bottom: 24px; }\n      footer { margin-top: 28px; padding: 40px 0 28px; }'),
+              ('      .container { width: min(100% - 24px, 1180px); }', '      .container { width: min(100% - 24px, 1180px); }\n      main { padding-top: 24px; }\n      main > section { padding: 20px 0; }\n      .section-title { margin-bottom: 22px; }\n      footer { margin-top: 24px; }'),
+          ]
+
+          updated = original
+          for old, new in replacements:
+              count = updated.count(old)
+              if count != 1:
+                  raise SystemExit(f'Trecho esperado não encontrado uma única vez: {old!r} (ocorrências: {count})')
+              updated = updated.replace(old, new, 1)
+
+          def without_style(value: str) -> str:
+              return re.sub(r'<style>.*?</style>', '<style></style>', value, count=1, flags=re.S)
+
+          if without_style(original) != without_style(updated):
+              raise SystemExit('Conteúdo fora do CSS foi alterado; operação cancelada.')
+
+          updated_hash = hashlib.sha256(updated.encode('utf-8')).hexdigest()
+          expected_updated = 'd4b81e4f7090702fb82d259c5031dbdfae71353a14d185e99a732a9d589ca6ac'
+          if updated_hash != expected_updated:
+              raise SystemExit(f'Index final não corresponde à versão validada: {updated_hash}')
+
+          path.write_text(updated, encoding='utf-8')
+          print(f'Index validado: {updated_hash}')
+          PY
+
+          rm -f .github/workflows/export-current-index.yml
+
+      - name: Commit isolated spacing correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A index.html .github/workflows/export-current-index.yml
+          git commit -m "Ajusta somente os espaçamentos das seções"
+          git push origin HEAD:${{ github.head_ref }}
