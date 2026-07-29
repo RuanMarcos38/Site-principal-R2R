@@ -1,0 +1,120 @@
+name: Configurar tags de rastreamento
+
+on:
+  push:
+    paths:
+      - '.github/workflows/configure-tracking.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  configure-tracking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inserir Google Analytics, AdSense e Meta Pixel
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          original = path.read_text(encoding='utf-8')
+
+          identifiers = (
+              'G-DHSV67MTDJ',
+              'ca-pub-4258015992085102',
+              '1712816106504415',
+          )
+          duplicated = [identifier for identifier in identifiers if identifier in original]
+          if duplicated:
+              raise SystemExit(f'Tags já existentes; operação interrompida para evitar duplicidade: {duplicated}')
+
+          newline = '\r\n' if '\r\n' in original else '\n'
+
+          head_block = '''
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DHSV67MTDJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-DHSV67MTDJ');
+  </script>
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4258015992085102"
+       crossorigin="anonymous"></script>
+
+  <!-- Meta Pixel Code -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1712816106504415');
+    fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+'''.replace('\n', newline)
+
+          body_block = '''
+  <!-- Meta Pixel Code (noscript) -->
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1712816106504415&ev=PageView&noscript=1"
+    alt=""
+  ></noscript>
+'''.replace('\n', newline)
+
+          head_match = re.search(r'</head\s*>', original, flags=re.IGNORECASE)
+          if not head_match:
+              raise SystemExit('Tag </head> não encontrada.')
+
+          updated = original[:head_match.start()] + head_block + original[head_match.start():]
+
+          body_match = re.search(r'<body\b[^>]*>', updated, flags=re.IGNORECASE)
+          if not body_match:
+              raise SystemExit('Tag <body> não encontrada.')
+
+          updated = updated[:body_match.end()] + body_block + updated[body_match.end():]
+
+          restored = updated.replace(head_block, '', 1).replace(body_block, '', 1)
+          if restored != original:
+              raise SystemExit('Validação falhou: houve alteração fora dos blocos autorizados.')
+
+          path.write_text(updated, encoding='utf-8', newline='')
+          print('Tags inseridas e conteúdo original preservado.')
+          PY
+
+      - name: Validar alteração
+        shell: bash
+        run: |
+          grep -q 'G-DHSV67MTDJ' index.html
+          grep -q 'ca-pub-4258015992085102' index.html
+          test "$(grep -o '1712816106504415' index.html | wc -l)" -eq 2
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "index.html"
+
+      - name: Publicar alteração na branch
+        shell: bash
+        run: |
+          rm -f .github/workflows/configure-tracking.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Configura Google Analytics, AdSense e Meta Pixel"
+          git push
