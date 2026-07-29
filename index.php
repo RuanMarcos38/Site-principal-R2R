@@ -28,7 +28,14 @@ if (strpos($html, 'G-DHSV67MTDJ') === false) {
 HTML;
 }
 
-if (strpos($html, 'ca-pub-4258015992085102') === false) {
+if (strpos($html, 'google-adsense-account') === false) {
+    $headAdditions[] = <<<'HTML'
+<!-- Google AdSense account verification -->
+<meta name="google-adsense-account" content="ca-pub-4258015992085102">
+HTML;
+}
+
+if (strpos($html, 'pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4258015992085102') === false) {
     $headAdditions[] = <<<'HTML'
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4258015992085102"
