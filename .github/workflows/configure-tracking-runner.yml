@@ -1,0 +1,116 @@
+name: Validar configuração de tracking
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  configure-tracking:
+    if: github.head_ref == 'chore/configurar-tags-tracking-20260729'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar branch da alteração
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Inserir tags sem alterar o conteúdo existente
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          original = path.read_text(encoding='utf-8')
+          identifiers = ('G-DHSV67MTDJ', 'ca-pub-4258015992085102', '1712816106504415')
+          present = [identifier in original for identifier in identifiers]
+
+          if all(present):
+              print('As três integrações já estão configuradas nesta branch.')
+              raise SystemExit(0)
+          if any(present):
+              raise SystemExit('Configuração parcial encontrada; interrompido para evitar duplicidade.')
+
+          newline = '\r\n' if '\r\n' in original else '\n'
+          head_block = '''
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DHSV67MTDJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-DHSV67MTDJ');
+  </script>
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4258015992085102"
+       crossorigin="anonymous"></script>
+
+  <!-- Meta Pixel Code -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1712816106504415');
+    fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+'''.replace('\n', newline)
+          body_block = '''
+  <!-- Meta Pixel Code (noscript) -->
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1712816106504415&ev=PageView&noscript=1"
+    alt=""
+  ></noscript>
+'''.replace('\n', newline)
+
+          head_match = re.search(r'</head\s*>', original, flags=re.IGNORECASE)
+          if not head_match:
+              raise SystemExit('Tag </head> não encontrada.')
+          updated = original[:head_match.start()] + head_block + original[head_match.start():]
+
+          body_match = re.search(r'<body\b[^>]*>', updated, flags=re.IGNORECASE)
+          if not body_match:
+              raise SystemExit('Tag <body> não encontrada.')
+          updated = updated[:body_match.end()] + body_block + updated[body_match.end():]
+
+          restored = updated.replace(head_block, '', 1).replace(body_block, '', 1)
+          if restored != original:
+              raise SystemExit('Validação falhou: conteúdo fora dos blocos autorizados foi alterado.')
+
+          path.write_text(updated, encoding='utf-8', newline='')
+          print('Tags inseridas; conteúdo original preservado.')
+          PY
+
+      - name: Validar e publicar na branch
+        shell: bash
+        run: |
+          grep -q 'G-DHSV67MTDJ' index.html
+          grep -q 'ca-pub-4258015992085102' index.html
+          test "$(grep -o '1712816106504415' index.html | wc -l)" -eq 2
+          git diff --check
+          if git diff --quiet; then
+            echo 'Nenhuma alteração adicional necessária.'
+            exit 0
+          fi
+          test "$(git diff --name-only | wc -l)" -eq 1
+          test "$(git diff --name-only)" = "index.html"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Configura Google Analytics, AdSense e Meta Pixel"
+          git push origin HEAD:${{ github.head_ref }}
