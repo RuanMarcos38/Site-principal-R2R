@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Solução de Promoção | Radar de Ofertas</title>
-    <script type="module" crossorigin src="/assets/index-CIr09CSB.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-QRA9Lff3.css">
+    <script type="module" crossorigin src="/assets/index-B5isipDZ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DXNdJ8tA.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>
