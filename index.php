@@ -12,6 +12,22 @@ if ($html === false) {
 }
 
 $headAdditions = [];
+
+$headAdditions[] = <<<'HTML'
+<style id="r2r-professional-typography">
+  html,
+  body,
+  button,
+  input,
+  textarea,
+  select {
+    font-family: Arial, Helvetica, sans-serif;
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
+  }
+</style>
+HTML;
+
 $metaPixelMissing = strpos($html, '1712816106504415') === false;
 
 if (strpos($html, 'G-DHSV67MTDJ') === false) {
